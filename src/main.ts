@@ -15,6 +15,7 @@ interface DesignState {
   eyeStyle: EyeStyle;
   foreground: string;
   background: string;
+  transparentBackground: boolean;
   size: number;
   quietZone: number;
   errorLevel: ErrorLevel;
@@ -59,6 +60,7 @@ const defaultDesign: DesignState = {
   eyeStyle: "extra-rounded",
   foreground: "#00662C",
   background: "#FFFFFF",
+  transparentBackground: false,
   size: 1024,
   quietZone: 4,
   errorLevel: "Q",
@@ -144,6 +146,11 @@ app.innerHTML = `
           <div class="color-grid">
             ${colorControl("foreground", "Code color", design.foreground)}
             ${colorControl("background", "Background", design.background)}
+            <label class="checkbox-label transparent-toggle">
+              <input id="transparent-background" type="checkbox"${design.transparentBackground ? " checked" : ""} />
+              <span aria-hidden="true"></span>
+              <div><strong>Transparent background</strong><small>Applied to PNG and SVG exports</small></div>
+            </label>
           </div>
 
           <div class="palette-row" aria-label="ORNL code color presets">
@@ -200,8 +207,9 @@ app.innerHTML = `
           <div><span class="live-indicator" aria-hidden="true"></span><strong>Live preview</strong></div>
           <span id="payload-count">0 characters</span>
         </div>
-        <div class="preview-stage">
+        <div id="preview-stage" class="preview-stage${design.transparentBackground ? " is-transparent" : ""}">
           <div class="stage-grid" aria-hidden="true"></div>
+          <span id="transparent-chip" class="transparent-chip"${design.transparentBackground ? "" : " hidden"}>Transparent</span>
           <div id="qr-preview" aria-label="Generated QR code preview"></div>
         </div>
         <div id="quality-status" class="quality-status" role="status"></div>
@@ -299,6 +307,14 @@ function wireEvents(): void {
     const target = event.target as HTMLInputElement | HTMLTextAreaElement;
     if (target.dataset.field) {
       fields[target.dataset.field] = target.type === "checkbox" ? (target as HTMLInputElement).checked : target.value;
+      updateAll();
+      return;
+    }
+
+    if (target.id === "transparent-background") {
+      design.transparentBackground = (target as HTMLInputElement).checked;
+      syncTransparencyControls();
+      persistDesign();
       updateAll();
       return;
     }
@@ -411,7 +427,7 @@ function buildOptions(size: number, data: string): Options {
     margin,
     qrOptions: { errorCorrectionLevel: design.errorLevel },
     dotsOptions: { color: design.foreground, type: design.dotStyle },
-    backgroundOptions: { color: design.background },
+    backgroundOptions: { color: design.transparentBackground ? "transparent" : design.background },
     cornersSquareOptions: { color: design.foreground, type: design.eyeStyle },
     cornersDotOptions: { color: design.foreground, type: design.eyeStyle === "extra-rounded" ? "dot" : design.eyeStyle },
   };
@@ -422,6 +438,12 @@ function updateQuality(value: string, error: string | null): void {
   if (error) {
     host.className = "quality-status quality-status--error";
     host.innerHTML = `<span aria-hidden="true">!</span><div><strong>Needs adjustment</strong><p>${escapeHtml(error)}</p></div>`;
+    return;
+  }
+
+  if (design.transparentBackground) {
+    host.className = "quality-status quality-status--warning";
+    host.innerHTML = '<span aria-hidden="true">!</span><div><strong>Transparent background</strong><p>Scan reliability depends on the final surface. Place the code over a light, solid area and test it before use.</p></div>';
     return;
   }
 
@@ -507,11 +529,27 @@ function syncAllDesignControls(): void {
   setSelected("[data-eye-style]", document.querySelector(`[data-eye-style="${design.eyeStyle}"]`) as HTMLButtonElement);
   syncColor("foreground", design.foreground);
   syncColor("background", design.background);
+  syncTransparencyControls();
   getElement<HTMLInputElement>("output-size").value = String(design.size);
   getElement("output-size-value").textContent = `${design.size} px`;
   getElement<HTMLInputElement>("quiet-zone").value = String(design.quietZone);
   getElement("quiet-zone-value").textContent = `${design.quietZone}%`;
   getElement<HTMLSelectElement>("error-level").value = design.errorLevel;
+}
+
+function syncTransparencyControls(): void {
+  const checkbox = getElement<HTMLInputElement>("transparent-background");
+  const picker = getElement<HTMLInputElement>("background-picker");
+  const textInput = getElement<HTMLInputElement>("background-text");
+  const colorControl = getElement("background-control");
+  const stage = getElement("preview-stage");
+  const chip = getElement("transparent-chip");
+  checkbox.checked = design.transparentBackground;
+  picker.disabled = design.transparentBackground;
+  textInput.disabled = design.transparentBackground;
+  colorControl.classList.toggle("is-disabled", design.transparentBackground);
+  stage.classList.toggle("is-transparent", design.transparentBackground);
+  chip.hidden = !design.transparentBackground;
 }
 
 function syncColor(kind: "foreground" | "background", color: string): void {
@@ -610,5 +648,6 @@ function eyeIcon(style: EyeStyle): string {
 }
 
 function colorControl(kind: "foreground" | "background", label: string, color: string): string {
-  return `<div class="color-control"><label for="${kind}-text">${label}</label><div class="color-input"><input id="${kind}-picker" data-color-picker="${kind}" type="color" value="${color}" aria-label="Choose ${label.toLowerCase()}" /><input id="${kind}-text" data-color-text="${kind}" type="text" value="${color}" maxlength="7" spellcheck="false" aria-label="${label} hex value" /></div></div>`;
+  const disabled = kind === "background" && design.transparentBackground;
+  return `<div id="${kind}-control" class="color-control${disabled ? " is-disabled" : ""}"><label for="${kind}-text">${label}</label><div class="color-input"><input id="${kind}-picker" data-color-picker="${kind}" type="color" value="${color}" aria-label="Choose ${label.toLowerCase()}"${disabled ? " disabled" : ""} /><input id="${kind}-text" data-color-text="${kind}" type="text" value="${color}" maxlength="7" spellcheck="false" aria-label="${label} hex value"${disabled ? " disabled" : ""} /></div></div>`;
 }

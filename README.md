@@ -1,6 +1,6 @@
 # QR Studio
 
-A mobile-friendly, client-side QR code generator using the ORNL color system. It creates QR codes for websites, text, email, phone, SMS, Wi-Fi, vCards, and locations, then exports high-resolution PNG or editable SVG files.
+A mobile-friendly, client-side QR code generator using the ORNL color system. It creates QR codes for websites, text, email, phone, SMS, Wi-Fi, vCards, and locations, then exports high-resolution PNG or editable SVG files with solid or transparent backgrounds.
 
 ## Local development
 

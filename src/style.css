@@ -508,6 +508,39 @@ select:focus {
   margin-top: 28px;
 }
 
+.color-control {
+  transition: opacity 150ms ease;
+}
+
+.color-control.is-disabled {
+  opacity: 0.46;
+}
+
+.transparent-toggle {
+  grid-column: 1 / -1;
+  gap: 12px;
+  width: 100%;
+  margin-top: 2px;
+  padding: 14px 0 0;
+  border-top: 1px solid var(--line);
+}
+
+.transparent-toggle div {
+  display: grid;
+  gap: 2px;
+}
+
+.transparent-toggle strong {
+  color: var(--ornl-hale-navy);
+  font-size: 13px;
+}
+
+.transparent-toggle small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
 .color-input {
   display: grid;
   grid-template-columns: 54px 1fr;
@@ -659,6 +692,36 @@ input[type="range"] {
   overflow: hidden;
   border: 1px solid var(--line);
   background: var(--page);
+}
+
+.preview-stage.is-transparent {
+  background:
+    linear-gradient(45deg, var(--ornl-graphite) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--ornl-graphite) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--ornl-graphite) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--ornl-graphite) 75%),
+    var(--ornl-polar);
+  background-position: 0 0, 0 12px, 12px -12px, -12px 0;
+  background-size: 24px 24px;
+}
+
+.transparent-chip {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  padding: 5px 7px;
+  border: 1px solid var(--ornl-hale-navy);
+  color: var(--ornl-hale-navy);
+  background: var(--ornl-polar);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.transparent-chip[hidden] {
+  display: none;
 }
 
 .stage-grid {
