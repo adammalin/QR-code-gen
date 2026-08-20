@@ -21,7 +21,7 @@ The static site is generated in `dist/`. Vite uses relative asset paths, so the 
 
 ## GitHub Pages
 
-The included `.github/workflows/deploy-pages.yml` workflow tests, builds, and deploys the site whenever `main` is pushed. In the repository settings, set **Pages → Build and deployment → Source** to **GitHub Actions**.
+The repository is configured to publish through GitHub Actions. The included `.github/workflows/deploy-pages.yml` workflow tests, builds, and deploys the site whenever `main` is pushed.
 
 No QR content is sent to a server or stored in local storage. Only appearance settings are remembered in the browser.
 
