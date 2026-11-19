@@ -5,21 +5,12 @@ import "@fontsource/mulish/latin-800.css";
 import QRCodeStyling, { type Options } from "qr-code-styling";
 import { createPayload, type FieldValues, type QRDataType } from "./data";
 import "./style.css";
+import { buildQrOptions, defaultDesign, byteCapacity, moduleMargin, type DesignState } from "./qr-options";
 
-type DotStyle = "dots" | "square" | "rounded";
-type EyeStyle = "square" | "extra-rounded" | "dot";
-type ErrorLevel = "L" | "M" | "Q" | "H";
-
-interface DesignState {
-  dotStyle: DotStyle;
-  eyeStyle: EyeStyle;
-  foreground: string;
-  background: string;
-  transparentBackground: boolean;
-  size: number;
-  quietZone: number;
-  errorLevel: ErrorLevel;
-}
+import type { DotStyle, EyeStyle, ErrorLevel } from "./qr-options";
+import { connectCompanion } from "./companion";
+import type { EditorState } from "../mcp/workspace";
+import { registerBrowserTools } from "./browser-tools";
 
 const dataTypes: Array<{ id: QRDataType; label: string; short: string }> = [
   { id: "url", label: "Website", short: "URL" },
@@ -55,26 +46,14 @@ const defaultFields: FieldValues = {
   locationLabel: "",
 };
 
-const defaultDesign: DesignState = {
-  dotStyle: "dots",
-  eyeStyle: "extra-rounded",
-  foreground: "#00662C",
-  background: "#FFFFFF",
-  transparentBackground: false,
-  size: 1024,
-  quietZone: 4,
-  errorLevel: "Q",
-};
-
-// Approximate Version 40 byte-mode limits. The guard prevents the QR library
-// from receiving payloads it cannot encode at the selected correction level.
-const byteCapacity: Record<ErrorLevel, number> = { L: 2953, M: 2331, Q: 1663, H: 1273 };
 
 const savedDesign = loadDesign();
 let currentType: QRDataType = "url";
 let fields: FieldValues = { ...defaultFields };
 let design: DesignState = { ...defaultDesign, ...savedDesign };
 let previewQr: QRCodeStyling | null = null;
+let companion: Awaited<ReturnType<typeof connectCompanion>> = null;
+let editorPaused = false;
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("App container is missing.");
@@ -98,6 +77,16 @@ app.innerHTML = `
       <h1 id="page-title">Make a QR code<br /><span>worth scanning.</span></h1>
       <p class="intro-copy">Choose your content, shape the modules, and export a crisp code for screens or print. Everything happens in your browser.</p>
     </section>
+
+    <details class="agent-access" id="agent-access">
+      <summary>Use QR Studio with an AI agent <span id="agent-connection-label">Local MCP + skill</span></summary>
+      <div class="agent-access-body">
+        <p id="agent-status" role="status">Connect the local companion to let agents share your browser editor, preview codes, and save verified PNG and SVG files. Connected agents can read editor content while access is enabled.</p>
+        <div class="agent-buttons"><button type="button" class="button button--secondary" id="agent-pause" hidden>Pause editor access</button><button type="button" class="button button--secondary" id="agent-reload" hidden>Reload shared state</button></div>
+        <p><span id="agent-plugin-download"><a href="./downloads/qr-studio-plugin.zip" download>Download the agent plugin</a> · </span><a href="https://github.com/adammalin/QR-code-gen#agent-access">Setup instructions</a></p>
+        <p class="agent-help">The plugin includes the local MCP server and a QR workflow skill. The public site works independently. Local editor access can be paused at any time.</p>
+      </div>
+    </details>
 
     <div class="studio-layout">
       <section class="controls-panel" aria-label="QR code settings">
@@ -194,8 +183,8 @@ app.innerHTML = `
                 </select>
               </label>
               <div class="range-control range-control--compact">
-                <div class="range-label"><label for="quiet-zone">Quiet zone</label><output id="quiet-zone-value">${design.quietZone}%</output></div>
-                <input id="quiet-zone" type="range" min="0" max="12" step="1" value="${design.quietZone}" />
+                <div class="range-label"><label for="quiet-zone">Quiet zone <small>(minimum 4 modules)</small></label><output id="quiet-zone-value">${design.quietZone}%</output></div>
+                <input id="quiet-zone" type="range" min="0" max="45" step="0.1" value="${design.quietZone}" />
               </div>
             </div>
           </details>
@@ -223,7 +212,7 @@ app.innerHTML = `
           <button class="button button--quiet" id="copy-png" type="button">Copy PNG</button>
         </div>
         <button class="reset-button" id="reset-design" type="button">Reset appearance</button>
-        <p class="privacy-note"><span aria-hidden="true">◆</span><strong>Private by design.</strong> Your data never leaves this device.</p>
+        <p class="privacy-note"><span aria-hidden="true">◆</span><strong>Generated locally.</strong> You choose what to share with connected agents.</p>
       </aside>
     </div>
   </main>
@@ -238,6 +227,56 @@ renderTypeFields();
 createPreview();
 wireEvents();
 updateAll();
+void connectCompanion({
+  getState: () => ({ type: currentType, fields: { ...fields }, design: { ...design } }) as EditorState,
+  apply(state) {
+    currentType = state.type; fields = { ...defaultFields, ...state.fields } as FieldValues; design = { ...state.design };
+    document.querySelectorAll<HTMLButtonElement>("[data-type]").forEach(button => {
+      const active = button.dataset.type === currentType;
+      button.classList.toggle("is-active", active); button.setAttribute("aria-selected", String(active));
+    });
+    renderTypeFields(); syncAllDesignControls(); updateAll();
+  },
+  status(message, conflict = false) { getElement("agent-status").textContent = message; getElement("agent-reload").hidden = !conflict; },
+  access(paused) {
+    editorPaused = paused;
+    getElement("agent-plugin-download").hidden = true;
+    getElement("agent-pause").hidden = false;
+    getElement("agent-pause").textContent = paused ? "Resume editor access" : "Pause editor access";
+    getElement("agent-connection-label").textContent = paused ? "Editor access paused" : "Local editor connected";
+  },
+}).then(result => { companion = result; }).catch(() => { getElement("agent-status").textContent = "Could not connect to the local companion. Your browser editor is still available."; });
+getElement("agent-pause").addEventListener("click", () => { void companion?.pause(!editorPaused).catch(error => showToast(error.message, true)); });
+getElement("agent-reload").addEventListener("click", () => { void companion?.reload().catch(error => showToast(error.message, true)); });
+if (registerBrowserTools({
+  paused: () => editorPaused,
+  state: () => ({ type: currentType, fields: { ...fields }, design: { ...design } }),
+  set(job) {
+    const { type, ...values } = job.content;
+    const payload = createPayload(type, Object.fromEntries(Object.entries(values).map(([k, v]) => [k, typeof v === "number" ? String(v) : v])));
+    if (payload.error || new TextEncoder().encode(payload.value).length > byteCapacity[job.design.errorLevel]) throw new Error(payload.error ?? "Content is too large for this error correction level.");
+    currentType = type;
+    fields = { ...defaultFields, ...Object.fromEntries(Object.entries(values).map(([k, v]) => [k, typeof v === "number" ? String(v) : v])) };
+    design = { ...job.design, quietZone: 0 };
+    design.quietZone = moduleMargin(payload.value, design.size, design.errorLevel, job.design.quietZoneModules) / design.size * 100;
+    document.querySelector<HTMLButtonElement>(`[data-type="${currentType}"]`)?.click();
+    renderTypeFields(); syncAllDesignControls(); updateAll();
+    return { applied: true, type: currentType };
+  },
+  async export(format) {
+    const payload = createPayload(currentType, fields);
+    if (payload.error) throw new Error(payload.error);
+    if (new TextEncoder().encode(payload.value).length > byteCapacity[design.errorLevel]) throw new Error("Content exceeds capacity.");
+    return exportQr(format, document.querySelector<HTMLButtonElement>(`[data-export="${format}"]`)!);
+  },
+})) {
+  getElement("agent-pause").hidden = false;
+  getElement("agent-pause").addEventListener("click", () => {
+    if (companion) return;
+    editorPaused = !editorPaused;
+    getElement("agent-pause").textContent = editorPaused ? "Resume editor access" : "Pause editor access";
+  });
+}
 
 function wireEvents(): void {
   app?.addEventListener("click", async (event) => {
@@ -394,6 +433,7 @@ function designWifiPassword(): string {
 }
 
 function updateAll(): void {
+  companion?.changed();
   const payload = createPayload(currentType, fields);
   const payloadBytes = new TextEncoder().encode(payload.value).length;
   const capacityError =
@@ -418,19 +458,7 @@ function createPreview(): void {
 }
 
 function buildOptions(size: number, data: string): Options {
-  const margin = Math.round(size * (design.quietZone / 100));
-  return {
-    width: size,
-    height: size,
-    type: "svg",
-    data,
-    margin,
-    qrOptions: { errorCorrectionLevel: design.errorLevel },
-    dotsOptions: { color: design.foreground, type: design.dotStyle },
-    backgroundOptions: { color: design.transparentBackground ? "transparent" : design.background },
-    cornersSquareOptions: { color: design.foreground, type: design.eyeStyle },
-    cornersDotOptions: { color: design.foreground, type: design.eyeStyle === "extra-rounded" ? "dot" : design.eyeStyle },
-  };
+  return buildQrOptions(design, size, data);
 }
 
 function updateQuality(value: string, error: string | null): void {
@@ -453,7 +481,6 @@ function updateQuality(value: string, error: string | null): void {
   const issues: string[] = [];
   if (ratio < 4.5) issues.push(`Contrast is only ${ratio.toFixed(1)}:1; use darker modules or a lighter background.`);
   if (foregroundLuminance >= backgroundLuminance) issues.push("The code should be darker than its background for reliable scanning.");
-  if (design.quietZone < 3) issues.push("Increase the quiet zone to at least 3% for more reliable scanning.");
   if (value.length > 1200) issues.push("This is a dense code; export it large and test it with several devices.");
 
   if (issues.length) {
@@ -466,7 +493,7 @@ function updateQuality(value: string, error: string | null): void {
   host.innerHTML = `<span aria-hidden="true">✓</span><div><strong>Strong scan contrast</strong><p>${ratio.toFixed(1)}:1 contrast · ${design.errorLevel} error correction</p></div>`;
 }
 
-async function exportQr(extension: "png" | "svg", button: HTMLButtonElement): Promise<void> {
+async function exportQr(extension: "png" | "svg", button: HTMLButtonElement): Promise<{ downloadRequested: boolean; format?: string; filename?: string; error?: string } | undefined> {
   const payload = createPayload(currentType, fields);
   if (payload.error) return;
   setBusy(button, true);
@@ -474,7 +501,7 @@ async function exportQr(extension: "png" | "svg", button: HTMLButtonElement): Pr
     const qr = new QRCodeStyling(buildOptions(design.size, payload.value));
     const raw = await qr.getRawData(extension);
     if (!raw) throw new Error("The QR file could not be created.");
-    const blob = raw instanceof Blob ? raw : new Blob([raw], { type: extension === "svg" ? "image/svg+xml" : "image/png" });
+    const blob = raw instanceof Blob ? raw : new Blob([new Uint8Array(raw)], { type: extension === "svg" ? "image/svg+xml" : "image/png" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -482,8 +509,10 @@ async function exportQr(extension: "png" | "svg", button: HTMLButtonElement): Pr
     link.click();
     URL.revokeObjectURL(url);
     showToast(`${extension.toUpperCase()} downloaded.`);
+    return { downloadRequested: true, format: extension, filename: link.download };
   } catch (error) {
     showToast(error instanceof Error ? error.message : "Export failed.", true);
+    return { downloadRequested: false, error: error instanceof Error ? error.message : "Export failed." };
   } finally {
     setBusy(button, false);
   }

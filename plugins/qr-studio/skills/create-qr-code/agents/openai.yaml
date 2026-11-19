@@ -1,0 +1,3 @@
+interface:
+  display_name: "QR Studio"
+  short_description: "Create, edit and verify QR Studio codes"
