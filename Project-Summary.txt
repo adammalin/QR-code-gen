@@ -3,9 +3,9 @@ Updated: November 19, 2026
 
 Project root
 /Users/ia2/Documents/Coding Projects/QR-code-gen
-Branch: codex/qr-studio-mcp
-Status: release 0.2.0 prepared and verified; push, merge and deployment authorized
-by the user. Deployment evidence is recorded in outputs after publication.
+Branch: main (release work merged from codex/qr-studio-mcp)
+Status: release 0.2.0 merged, published and verified live. Deployment evidence
+is recorded in outputs/Live-Site-Verification/.
 
 Outcome
 Added a loopback-only browser companion with standard Streamable HTTP MCP and
@@ -142,3 +142,29 @@ no plugin audience or installation changed.
 
 Backup worktree and current root summary:
 /Users/ia2/Documents/Coding Projects/ORNL-AI-Workflow-Plugins-QR-Update
+
+
+QR Studio 0.2.0 publication — November 19, 2026
+Merged release PR https://github.com/adammalin/QR-code-gen/pull/1
+Release/deployment commit: 65457368a292e65e33222cc5edb2b600f7f8bafd
+Version tag: v0.2.0
+Live address: https://adammalin.github.io/QR-code-gen/
+GitHub Pages workflow 44609726123 passed both build and deployment. All 32 tests
+passed locally and the production workflow passed its test/build/package steps.
+The live JavaScript hash matches the tested local build. The live plugin ZIP
+returned HTTP 200, reports version 0.2.0, and every entry matches the tested ZIP.
+The browser was refreshed and displayed the new agent-access/download controls.
+Verification JSON, downloaded package and screenshot are in
+outputs/Live-Site-Verification/.
+
+Published GitHub releases with downloadable assets:
+- https://github.com/adammalin/QR-code-gen/releases/tag/v0.2.0
+- https://github.com/adammalin/ORNL-AI-Workflow-Plugins/releases/tag/ornl-vector-document/v0.1.2
+- https://github.com/adammalin/ORNL-AI-Workflow-Plugins/releases/tag/ornl-indesign-publications/v0.1.1
+- https://github.com/adammalin/ORNL-AI-Workflow-Plugins/releases/tag/create-qr-code/v0.1.0
+
+Every private release asset's server SHA-256 digest and byte count was matched
+to the archived local file. Source/tag backups and release receipts are retained
+in the existing private plugin repository; no new repositories or sharing
+changes were needed. QR Studio's app and bundled agent plugin are backed up in
+the app repository at version 0.2.0.
