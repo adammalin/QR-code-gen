@@ -1,0 +1,24 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "qr-studio",
+  "version": "0.2.0",
+  "description": "Create, style, preview, verify and export QR codes with a shared local browser editor.",
+  "author": { "name": "Adam Malin" },
+  "repository": "https://github.com/adammalin/QR-code-gen",
+  "extensions": {
+    "com.openai": {
+      "requires_local_executor": true,
+      "interface": {
+        "displayName": "QR Studio",
+        "shortDescription": "Create and verify QR codes",
+        "longDescription": "Use a shared local browser editor and MCP tools to create eight kinds of QR codes, customize modules and finders, preview images, verify encoded bytes, and export PNG and editable SVG files individually or in batches. Includes an agent workflow skill. Requires Node.js 22 and local setup; no hosted cloud MCP endpoint is provided.",
+        "developerName": "Adam Malin",
+        "category": "Productivity",
+        "capabilities": ["Read", "Write"],
+        "logo": "./assets/qr-studio.svg",
+        "composerIcon": "./assets/qr-studio.svg",
+        "defaultPrompt": "Use QR Studio to create a QR code, show it in the local browser editor, and save verified PNG and SVG files."
+      }
+    }
+  }
+}

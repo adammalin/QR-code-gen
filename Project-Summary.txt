@@ -1,0 +1,144 @@
+QR Studio — local browser MCP integration
+Updated: November 19, 2026
+
+Project root
+/Users/ia2/Documents/Coding Projects/QR-code-gen
+Branch: codex/qr-studio-mcp
+Status: release 0.2.0 prepared and verified; push, merge and deployment authorized
+by the user. Deployment evidence is recorded in outputs after publication.
+
+Outcome
+Added a loopback-only browser companion with standard Streamable HTTP MCP and
+a stdio launcher. All local clients share the companion's live editor. The
+launcher starts or reuses one companion, and it continues after a chat ends.
+The current local editor is open at http://127.0.0.1:47833/.
+
+Agent capabilities
+- Eight tools: status, get editor, set editor, build payload, validate, preview,
+  generate files, and batch generation (up to 25 jobs).
+- All eight website content types and existing module/finder/color styles.
+- PNG and editable SVG exports, generated-file resources and download URLs.
+- Byte-for-byte QR decode verification with jsQR, plus contrast/density checks.
+- Revision protection against conflicting browser/agent edits.
+- Visible Pause editor access control; independent generation stays available.
+- Optional three-action WebMCP registration in supporting browsers.
+
+Shared renderer fixes
+- Preserves UTF-8, including accented text, scientific symbols and emoji.
+- Enforces at least a four-module quiet zone.
+- Preserves text and Wi-Fi credential whitespace.
+- Normalizes SVG clip references for correct server rasterization.
+- Tightens URL, phone, Wi-Fi security and vCard validation/escaping.
+
+Installed locally
+- Codex MCP name: qr-studio (enabled, stdio).
+- Node: /Users/ia2/.local/bin/node
+- Entry: plugins/qr-studio/server/index.mjs within the project root.
+- Skill: /Users/ia2/.codex/skills/create-qr-code/SKILL.md
+- Open a fresh Codex chat to load the new tools and installed skill.
+  Registration and SDK protocol use were verified; this existing chat does
+  not hot-load a new native tool namespace.
+
+Plugin deliverable
+outputs/qr-studio-plugin-0.2.0.zip
+Portable root plugin.json, mcp.json, built companion/browser app, locked runtime
+dependencies, local setup instructions, icon and create-qr-code skill.
+The extracted package requires npm ci --omit=dev before connecting its server.
+No account upload or public plugin publication was performed.
+
+Validation
+- npm test: 32 passed across three test files.
+- Website and MCP TypeScript/build checks passed.
+- Real HTTP and stdio clients discovered tools, prompts and resources.
+- Browser/API synchronization, stale revisions, pause controls, resource reads,
+  unique files, downloads, altered artifacts and batch errors were tested.
+- Host spoofing, cross-origin requests, source-file routes and non-JSON writes
+  were tested and blocked.
+- The live browser showed Local editor connected; pause/resume was tested.
+- Clean isolated ZIP installation discovered eight tools and generated two
+  files with a successful multilingual decode at the default 1024px size.
+- A styled 512px diagnostic sample correctly failed decoding; increasing to
+  1024px or using square styles passed. Tools return that distinction explicitly.
+- npm audit reported zero vulnerabilities after dependency updates.
+- git diff --check passed.
+- Native WebMCP was unavailable in the current browser; that optional route was
+  not verified end to end. Windows and other hosts were not qualified.
+
+Operation and boundaries
+The companion is bound to 127.0.0.1, checks Host/Origin, and accepts bounded JSON.
+It does not fetch QR destinations or arbitrary external assets. Exports use
+unique directories and exclusive writes; resources are restricted to known
+generated files and verified against their original digest.
+
+Default export folder: ~/Downloads/QR-Studio.
+QR_STUDIO_PORT and QR_STUDIO_OUTPUT_DIR override the defaults for the first
+companion instance. Later clients reuse that instance's settings.
+The current editor is held only in memory. It is not a saved project; stopping
+the companion loses its editor content. Files persist after it stops. Up to
+200 artifact handles are retained per companion session.
+
+Connected agents can receive editor content while access is enabled. Wi-Fi QR
+exports contain the password. Neither browser storage nor application logs
+persist QR content. QR exports are private local files; technical decode checks
+do not replace scanning final printed/placed artwork or any required approval.
+
+To develop and verify
+npm ci
+npm test
+npm run package:plugin
+
+To run the local browser editor
+npm start
+
+To use it from a new agent chat
+Ask: Use QR Studio to create a QR code for [exact content], show it in the local
+editor, and export verified PNG and SVG files.
+
+Standalone app skill — completed November 19, 2026
+Expanded and validated the create-qr-code skill as a complete app workflow.
+It covers new codes, live edits, current-code exports, batches, bounded decode
+repairs, explicit appearance choices, private credentials, and browser/MCP
+differences. Focused references document actual input schemas, the editor's
+percentage-versus-module quiet-zone mismatch, and verified setup routes.
+
+Installed under the matching skill name without retaining a duplicate initial
+folder. Invocation: $create-qr-code. Normal automatic discovery remains enabled.
+Added QR Studio UI metadata in agents/openai.yaml. The standard skill validator
+passed for source and installed copies. A new chat loads the installed skill.
+An isolated MCP workflow exercised reading/updating the editor, generation,
+warning inspection and a square-style corrective generation; it produced two
+readable files with a matching decode. The user's live editor was not changed.
+
+Standalone archive: outputs/create-qr-code-skill.zip
+The local plugin archive was refreshed with the same skill and references.
+Removed build-time copying of the plugin README over the maintained setup
+reference so future builds preserve this guide.
+
+Plugin repository backup and Adobe workflow integration — November 19, 2026
+Backed up the standalone skill to the private adammalin/ORNL-AI-Workflow-Plugins
+repository under skills/create-qr-code, with skills/catalog.json, an immutable
+0.1.0 skill ZIP, and scripts/sync_shared_skills.py to keep plugin bundles matched.
+Commit: 637630c2422c7e1d86cd99d4decdd4f41350d1f6
+Pushed to main and codex/qr-skill-routing. Version tags were pushed for the skill
+and both updated plugins.
+
+Updated the existing workspace account identities:
+- ORNL - Vector Document (Illustrator): 0.1.2, release
+  pluginrel_6aff5a21577881918224a65fa17fc7d3; existing UNLISTED visibility retained.
+- ORNL - InDesign Publications: 0.1.1, release
+  pluginrel_6aff5a2ded8c8191846c8e56fb3baffd; existing PRIVATE visibility retained.
+
+Each plugin bundles the same create-qr-code skill and routes new/replacement QR
+artwork through QR Studio. Added native-placement guidance: preserve real SVG/PNG
+geometry and quiet zones, use verified PNG for the bounded InDesign IDML helper,
+and distinguish generated-asset decoding from native-proof and device scans.
+
+24 canonical/bundled/plugin skill folders validated. All 27 changed account files
+were read back byte-for-byte; complete 104/44-file account inventories matched
+the prepared releases. Both full ZIPs and the standalone skill archive were
+hash-verified, and unrelated catalog entries were preserved. Worktree was clean
+after push. No new Adobe end-to-end QR placement or physical scan test performed;
+no plugin audience or installation changed.
+
+Backup worktree and current root summary:
+/Users/ia2/Documents/Coding Projects/ORNL-AI-Workflow-Plugins-QR-Update

@@ -29,6 +29,7 @@ function escapeWifi(value: string): string {
 
 function escapeVCard(value: string): string {
   return value
+    .replace(/\r\n?/g, "\n")
     .replace(/\\/g, "\\\\")
     .replace(/\n/g, "\\n")
     .replace(/,/g, "\\,")
@@ -40,15 +41,23 @@ function stringField(fields: FieldValues, key: string): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function rawField(fields: FieldValues, key: string): string {
+  const value = fields[key];
+  return typeof value === "string" ? value : "";
+}
+
 export function createPayload(type: QRDataType, fields: FieldValues): PayloadResult {
   switch (type) {
     case "url": {
       const rawUrl = stringField(fields, "url");
       if (!rawUrl) return { value: "", error: "Enter a URL to create a code." };
+      if (/^[a-z][a-z\d+.-]*:/i.test(rawUrl) && !/^https?:\/\//i.test(rawUrl) && !/^[^/:\s]+:\d+(?:[/#?]|$)/.test(rawUrl)) {
+        return { value: "", error: "Use an HTTP or HTTPS web address." };
+      }
       const url = normalizeUrl(rawUrl);
       try {
         const parsed = new URL(url);
-        if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error("Unsupported protocol");
+        if (!['http:', 'https:'].includes(parsed.protocol) || !parsed.hostname || parsed.username || parsed.password) throw new Error("Unsupported address");
       } catch {
         return { value: "", error: "Enter a valid web address." };
       }
@@ -56,8 +65,8 @@ export function createPayload(type: QRDataType, fields: FieldValues): PayloadRes
     }
 
     case "text": {
-      const text = stringField(fields, "text");
-      return text
+      const text = rawField(fields, "text");
+      return text.trim()
         ? { value: text, error: null }
         : { value: "", error: "Enter the text you want to encode." };
     }
@@ -69,7 +78,7 @@ export function createPayload(type: QRDataType, fields: FieldValues): PayloadRes
       }
       const query = new URLSearchParams();
       const subject = stringField(fields, "subject");
-      const body = stringField(fields, "body");
+      const body = rawField(fields, "body");
       if (subject) query.set("subject", subject);
       if (body) query.set("body", body);
       const suffix = query.toString();
@@ -78,24 +87,25 @@ export function createPayload(type: QRDataType, fields: FieldValues): PayloadRes
 
     case "phone": {
       const phone = stringField(fields, "phone").replace(/\s/g, "");
-      return phone
+      return phone && /^[+\d().xX-]+$/.test(phone) && /\d/.test(phone)
         ? { value: `tel:${phone}`, error: null }
         : { value: "", error: "Enter a phone number." };
     }
 
     case "sms": {
       const phone = stringField(fields, "smsPhone").replace(/\s/g, "");
-      const message = stringField(fields, "smsMessage");
-      return phone
+      const message = rawField(fields, "smsMessage");
+      return phone && /^[+\d().-]+$/.test(phone) && /\d/.test(phone)
         ? { value: `SMSTO:${phone}:${message}`, error: null }
         : { value: "", error: "Enter the recipient’s phone number." };
     }
 
     case "wifi": {
-      const ssid = stringField(fields, "ssid");
+      const ssid = rawField(fields, "ssid");
       if (!ssid) return { value: "", error: "Enter the network name (SSID)." };
       const security = stringField(fields, "security") || "WPA";
-      const password = stringField(fields, "password");
+      if (!["WPA", "WEP", "nopass"].includes(security)) return { value: "", error: "Choose WPA, WEP, or an open network." };
+      const password = rawField(fields, "password");
       if (security !== "nopass" && !password) {
         return { value: "", error: "Enter the network password or choose Open network." };
       }
@@ -114,6 +124,8 @@ export function createPayload(type: QRDataType, fields: FieldValues): PayloadRes
       const phone = stringField(fields, "contactPhone");
       const email = stringField(fields, "contactEmail");
       const website = normalizeUrl(stringField(fields, "contactUrl"));
+      if (email && !emailPattern.test(email)) return { value: "", error: "Enter a valid contact email address." };
+      if (website && createPayload("url", { url: website }).error) return { value: "", error: "Enter a valid contact website." };
       const lines = [
         "BEGIN:VCARD",
         "VERSION:3.0",

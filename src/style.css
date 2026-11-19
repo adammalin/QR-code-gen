@@ -30,6 +30,15 @@
   box-sizing: border-box;
 }
 
+.agent-access { margin: 0 0 28px; border: 1px solid var(--line); background: white; border-radius: 12px; }
+.agent-access summary { padding: 18px 22px; cursor: pointer; font-weight: 800; color: var(--ornl-hale-navy); }
+.agent-access summary span { margin-left: 14px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.agent-access-body { padding: 0 22px 14px; max-width: 850px; }
+.agent-access-body a { color: var(--ornl-green); font-weight: 700; }
+.agent-help { color: var(--muted); font-size: 13px; }
+.agent-buttons { display: flex; flex-wrap: wrap; gap: 12px; }
+[hidden] { display: none !important; }
+
 html {
   scroll-behavior: smooth;
 }

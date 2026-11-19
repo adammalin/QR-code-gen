@@ -1,0 +1,21 @@
+import { execFileSync } from "node:child_process";
+import { mkdir, copyFile, rm, readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+
+const root = fileURLToPath(new URL("../", import.meta.url));
+const source = fileURLToPath(new URL("../plugins/qr-studio/", import.meta.url));
+const manifest = JSON.parse(await readFile(`${source}/plugin.json`, "utf8"));
+if (manifest.extensions["com.openai"].interface.shortDescription.length > 30) throw new Error("Plugin subtitle is too long.");
+await readFile(`${source}/server/index.mjs`);
+await readFile(`${source}/server/host.mjs`);
+await readFile(`${source}/site/index.html`);
+await readFile(`${source}/package-lock.json`);
+const destination = `${root}/outputs/qr-studio-plugin-${manifest.version}.zip`;
+await mkdir(`${root}/outputs`, { recursive: true });
+await rm(destination, { force: true });
+execFileSync("zip", ["-q", "-r", destination, "plugin.json", "mcp.json", "README.md", "package.json", "package-lock.json", "skills", "assets", "server", "site"], { cwd: source });
+const entries = execFileSync("unzip", ["-Z1", destination], { encoding: "utf8" });
+if (/node_modules|\.env|\.git\//.test(entries)) throw new Error("Unexpected archive contents.");
+await mkdir(`${root}/dist/downloads`, { recursive: true });
+await copyFile(destination, `${root}/dist/downloads/qr-studio-plugin.zip`);
+console.log(destination);
